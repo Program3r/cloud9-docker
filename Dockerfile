@@ -2,7 +2,7 @@
 # Based on a work at https://github.com/docker/docker.
 # ------------------------------------------------------------------------------
 # Pull base image.
-FROM dockerfile/supervisor
+FROM kdelfour/supervisor-docker
 MAINTAINER Kevin Delfour <kevin@delfour.eu>
 
 # ------------------------------------------------------------------------------
@@ -14,36 +14,16 @@ RUN apt-get install -y build-essential g++ curl libssl-dev apache2-utils git lib
 # Install Node.js
 RUN curl -sL https://deb.nodesource.com/setup | bash -
 RUN apt-get install -y nodejs
-
-# ------------------------------------------------------------------------------
-# Install NVM
-RUN git clone https://github.com/creationix/nvm.git /.nvm
-RUN echo ". /.nvm/nvm.sh" >> /etc/bash.bashrc
-RUN /bin/bash -c '. /.nvm/nvm.sh && \
-    nvm install v0.10.18 && \
-    nvm use v0.10.18 && \
-    nvm alias default v0.10.18'
     
 # ------------------------------------------------------------------------------
 # Install Cloud9
-RUN git clone https://github.com/ajaxorg/cloud9/ /cloud9
+RUN git clone https://github.com/c9/core.git /cloud9
 WORKDIR /cloud9
-RUN npm install
+RUN scripts/install-sdk.sh
 
-RUN npm install -g sm
+# Tweak standlone.js conf
+RUN sed -i -e 's_127.0.0.1_0.0.0.0_g' /cloud9/configs/standalone.js 
 
-WORKDIR /cloud9/node_modules/ace
-RUN make clean build
-
-WORKDIR /cloud9/node_modules/packager
-RUN rm -rf node_modules
-RUN sm install
-    
-WORKDIR /cloud9
-CMD ["make"]
-
-RUN node ./node_modules/mappings/scripts/postinstall-notice.js
-    
 # Add supervisord conf
 ADD conf/cloud9.conf /etc/supervisor/conf.d/
 
@@ -58,7 +38,8 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ------------------------------------------------------------------------------
 # Expose ports.
-EXPOSE 3131
+EXPOSE 80
+EXPOSE 3000
 
 # ------------------------------------------------------------------------------
 # Start supervisor, define default command.
